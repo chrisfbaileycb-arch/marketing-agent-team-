@@ -86,7 +86,7 @@ Any skill can be queued from the Workflows page, the nightly scheduler, or the w
 
 **Front end:** React 19, TypeScript 5.8, Vite 7, Tailwind CSS 3, Radix UI Themes, Framer Motion, Recharts, React Router v6, Firebase JS SDK (Auth + Firestore).
 
-**Backend:** Firebase Cloud Functions (Node 20, 2 GB), Firestore, a page reader (fetch → `playwright-core` + `@sparticuz/chromium` fallback, read-only: no clicks, no logins), and a pluggable model layer — Gemini by default (AI Studio key, Google Search grounding) or Anthropic (`LLM_PROVIDER=anthropic`, web search tool). Structured outputs are validated with zod before anything is written.
+**Backend:** Firebase Cloud Functions (Node 20, 2 GB), Firestore, a page reader (fetch → `playwright-core` + `@sparticuz/chromium` fallback, read-only: no clicks, no logins), and a pluggable model layer — Anthropic Claude by default (web search tool) or Gemini (`LLM_PROVIDER=gemini`, Google Search grounding). Structured outputs are validated with zod before anything is written.
 
 ## Setup
 
@@ -96,13 +96,13 @@ Any skill can be queued from the Workflows page, the nightly scheduler, or the w
 2. `.firebaserc` — set `projects.default`.
 3. `src/firebase.ts` — paste the web-app config from the console. (Not a secret; access is governed by the rules below.)
 4. Run the app once, sign in with Google, and read your UID from the hover title on your email in the header (or the Auth console).
-5. `firestore.rules` — replace `"OWNER_UID"` with that UID. Every collection is denied to anyone else.
+5. `firestore.rules` — replace `"OWNER_UID"` with that UID (or run `bash scripts/setup-uid.sh YOUR_UID`). Every collection is denied to anyone else.
 
 ### 2. Functions
 
 ```bash
 cd functions
-cp .env.example .env      # fill in: GEMINI_API_KEY (or ANTHROPIC_API_KEY), OWNER_UID, APPLICANT_*
+cp .env.example .env      # fill in: ANTHROPIC_API_KEY, OWNER_UID, APPLICANT_*  (or GEMINI_API_KEY if you prefer Gemini)
 npm install
 npm run dryrun -- scout 1000 "United States"                        # open-ended scout, local, no Firebase
 npm run dryrun -- "residential solar installation" "Colorado, US"   # research one vertical
@@ -130,7 +130,6 @@ Revenue: `affiliateSales` is manual entry from your network dashboards. Nothing 
 - `marketingProjects.apiToken` is stored in Firestore (owner-only). Fine for one operator; move to Secret Manager if this is ever shared.
 - Affiliate-network revenue APIs (Impact, CJ, ShareASale) are not wired. The `offers` doc has the fields for it.
 - `Skills` and `HTTPS Layers` pages are UI-only; the layer/cert records persist but nothing enforces them.
-- `package.json` name is still `account-content-recovery-tool`; `scripts/init-git.sh` points at an older remote.
 
 ## Project layout
 
@@ -154,7 +153,8 @@ Revenue: `affiliateSales` is manual entry from your network dashboards. Nothing 
 ├── firestore.rules         owner-only access
 ├── firestore.indexes.json
 ├── public/
-├── scripts/init-git.sh     original bootstrap script (points at an older remote)
+├── scripts/init-git.sh     clone + setup reference
+├── scripts/setup-uid.sh    one-time: patches firestore.rules with your Firebase UID
 ├── firebase.json
 └── .firebaserc
 ```

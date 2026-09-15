@@ -16,8 +16,8 @@ export interface GenerateResult {
 }
 
 function provider(): 'gemini' | 'anthropic' {
-  const p = (process.env.LLM_PROVIDER || 'gemini').toLowerCase();
-  return p === 'anthropic' ? 'anthropic' : 'gemini';
+  const p = (process.env.LLM_PROVIDER || 'anthropic').toLowerCase();
+  return p === 'gemini' ? 'gemini' : 'anthropic';
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ async function generateGemini(opts: GenerateOptions): Promise<GenerateResult> {
 async function generateAnthropic(opts: GenerateOptions): Promise<GenerateResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set in functions/.env');
-  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
+  const model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6';
 
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey });

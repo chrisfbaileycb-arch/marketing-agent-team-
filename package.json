@@ -1,5 +1,5 @@
 {
-  "name": "account-content-recovery-tool",
+  "name": "marketing-agent-team",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -30,7 +30,6 @@
     "tailwindcss-animate": "^1.0.7",
     "vite": "^7.1.6",
     "zod": "^3.23.8",
-    "@supabase/supabase-js": "^2.57.4",
     "firebase": "^10.8.0"
   },
   "devDependencies": {
