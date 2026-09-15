@@ -11,7 +11,7 @@ import { auth, db } from '../firebase';
 // ---------------------------------------------------------------------------
 export interface Agent {
   id: string; name: string; status: 'active' | 'idle' | 'paused' | 'running'; efficiency: number; campaignId?: string;
-  schedule?: 'nightly' | 'off'; vertical?: string; region?: string; minPayout?: number; notes?: string;
+  schedule?: 'nightly' | 'off'; mode?: 'vertical' | 'scout'; vertical?: string; region?: string; minPayout?: number; notes?: string; channels?: string[];
 }
 export interface Campaign { id: string; name: string; budget: number; payout: number; status: 'active' | 'paused'; bannerUrl?: string }
 export interface Offer {
@@ -38,7 +38,7 @@ export interface IncomingWebhook {
   triggerCount: number; lastTriggeredAt: Date | null;
 }
 export interface Proposal {
-  id: string; type: 'affiliate_program' | 'marketing_content'; status: 'awaiting_approval' | 'approved' | 'rejected' | 'applied';
+  id: string; type: 'opportunity' | 'affiliate_program' | 'marketing_content'; status: 'awaiting_approval' | 'approved' | 'rejected' | 'applied';
   title: string; summary: string; data: any; createdAt: Date | null; taskId: string; agentId?: string;
 }
 export type SecurityHeaders = Record<string, boolean>;

@@ -31,6 +31,20 @@ export const onProposalDecided = functions
     if (before.status === after.status) return;
     const id = context.params.proposalId;
 
+    if (after.status === 'approved' && after.type === 'opportunity') {
+      // Chris liked the thesis → run the deep research on that vertical. Read-only, no signups.
+      const o = after.data as { vertical: string; region?: string; minCommission?: number; thesis: string };
+      await enqueueTask({
+        ownerUid: after.ownerUid,
+        skill: 'affiliate_research',
+        agentId: after.agentId,
+        campaignId: after.campaignId,
+        input: { vertical: o.vertical, region: o.region || 'United States', minPayout: o.minCommission ?? 1000, notes: `Thesis approved by operator: ${o.thesis}` },
+      });
+      functions.logger.info(`[proposal ${id}] opportunity approved → research queued for "${o.vertical}"`);
+      return;
+    }
+
     if (after.status === 'approved' && after.type === 'affiliate_program') {
       const program = after.data as unknown as AffiliateProgram;
       // Approved program → becomes an "offer" the Marketplace and Campaigns pages can use…
@@ -119,6 +133,17 @@ export const nightlyRun = functions
     let queued = 0;
     for (const doc of agents.docs) {
       const a = doc.data();
+      if (a.mode === 'scout') {
+        await enqueueTask({
+          ownerUid: owner,
+          skill: 'opportunity_scout',
+          agentId: doc.id,
+          campaignId: a.campaignId || undefined,
+          input: { minCommission: a.minPayout ?? 1000, region: a.region || 'United States', notes: a.notes || '', channels: a.channels || undefined },
+        });
+        queued++;
+        continue;
+      }
       if (!a.vertical) {
         functions.logger.warn(`agent ${doc.id} (${a.name}) is nightly but has no vertical; skipping`);
         continue;

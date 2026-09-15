@@ -7,7 +7,7 @@ export const FieldValue = admin.firestore.FieldValue;
 export const Timestamp = admin.firestore.Timestamp;
 
 /** Skill names the runner knows how to execute. */
-export type SkillName = 'affiliate_research' | 'application_prep' | 'marketing_content' | 'llm_prompt';
+export type SkillName = 'opportunity_scout' | 'affiliate_research' | 'application_prep' | 'marketing_content' | 'llm_prompt';
 
 export type TaskStatus = 'pending' | 'executing' | 'awaiting_approval' | 'completed' | 'failed';
 
@@ -41,7 +41,7 @@ export interface WorkflowTask {
 }
 
 /** A document in `proposals` — anything the agent wants Chris to approve before it goes further. */
-export type ProposalType = 'affiliate_program' | 'marketing_content';
+export type ProposalType = 'opportunity' | 'affiliate_program' | 'marketing_content';
 export type ProposalStatus = 'awaiting_approval' | 'approved' | 'rejected' | 'applied';
 
 export interface Proposal {

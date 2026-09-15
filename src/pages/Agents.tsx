@@ -13,6 +13,7 @@ const Agents: React.FC = () => {
   const [region, setRegion] = useState('United States');
   const [minPayout, setMinPayout] = useState('100');
   const [nightly, setNightly] = useState(true);
+  const [mode, setMode] = useState<'vertical' | 'scout'>('scout');
   const [showSpendForm, setShowSpendForm] = useState<string | null>(null);
   const [spendAmount, setSpendAmount] = useState('');
   const [spendReason, setSpendReason] = useState('');
@@ -23,11 +24,11 @@ const Agents: React.FC = () => {
       toast.error('Please enter an agent name.');
       return;
     }
-    if (!vertical) {
+    if (mode === 'vertical' && !vertical) {
       toast.error('Give the agent a vertical to research (e.g. "residential solar").');
       return;
     }
-    addAgent(name, { vertical, region, minPayout: parseFloat(minPayout) || 100, schedule: nightly ? 'nightly' : 'off' });
+    addAgent(name, { mode, vertical: mode === 'vertical' ? vertical : '', region, minPayout: parseFloat(minPayout) || (mode === 'scout' ? 1000 : 100), schedule: nightly ? 'nightly' : 'off' });
     toast.success(nightly ? 'Agent deployed. It will research overnight; results land on Approvals.' : 'Agent deployed.');
     setName(''); setVertical('');
     setShowForm(false);
@@ -69,15 +70,28 @@ const Agents: React.FC = () => {
             className="bg-white rounded-3xl border border-slate-100 p-8 space-y-6"
           >
             <h2 className="text-xl font-bold text-slate-900">Deploy New Agent</h2>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-bold text-slate-700 mb-2">What this agent does</legend>
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 cursor-pointer">
+                <input type="radio" name="mode" value="scout" checked={mode === 'scout'} onChange={() => { setMode('scout'); setMinPayout('1000'); }} className="mt-1" />
+                <span><span className="font-semibold text-slate-900">Scout for opportunities I haven't thought of</span><br />
+                <span className="text-sm text-slate-600">Scans the whole market for high-ticket commission programs and brings back theses. You approve the ones worth researching.</span></span>
+              </label>
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 cursor-pointer">
+                <input type="radio" name="mode" value="vertical" checked={mode === 'vertical'} onChange={() => { setMode('vertical'); setMinPayout('100'); }} className="mt-1" />
+                <span><span className="font-semibold text-slate-900">Research a vertical I name</span><br />
+                <span className="text-sm text-slate-600">Finds and verifies the actual programs in one category, with real page reads.</span></span>
+              </label>
+            </fieldset>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="agent-name" className="block text-sm font-bold text-slate-700 mb-2">Agent name</label>
                 <input id="agent-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Solar Scout"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
               </div>
-              <div>
-                <label htmlFor="agent-vertical" className="block text-sm font-bold text-slate-700 mb-2">What it researches</label>
-                <input id="agent-vertical" type="text" value={vertical} onChange={(e) => setVertical(e.target.value)} placeholder="e.g. residential solar installation"
+              <div className={mode === 'scout' ? 'opacity-50' : ''}>
+                <label htmlFor="agent-vertical" className="block text-sm font-bold text-slate-700 mb-2">{mode === 'scout' ? 'Vertical (not needed for a scout)' : 'What it researches'}</label>
+                <input id="agent-vertical" type="text" value={vertical} onChange={(e) => setVertical(e.target.value)} placeholder="e.g. residential solar installation" disabled={mode === 'scout'}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
               </div>
               <div>
@@ -86,7 +100,7 @@ const Agents: React.FC = () => {
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
               </div>
               <div>
-                <label htmlFor="agent-minpayout" className="block text-sm font-bold text-slate-700 mb-2">Ignore programs paying less than ($)</label>
+                <label htmlFor="agent-minpayout" className="block text-sm font-bold text-slate-700 mb-2">{mode === 'scout' ? 'Minimum commission worth my time ($)' : 'Ignore programs paying less than ($)'}</label>
                 <input id="agent-minpayout" type="number" min="0" value={minPayout} onChange={(e) => setMinPayout(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
               </div>
@@ -122,7 +136,7 @@ const Agents: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900">{agent.name}</h3>
-                      <p className="text-xs text-slate-500">{agent.vertical || 'No vertical set'}{agent.region ? ` · ${agent.region}` : ''}</p>
+                      <p className="text-xs text-slate-500">{agent.mode === 'scout' ? `Scout · $${agent.minPayout ?? 1000}+ commissions` : (agent.vertical || 'No vertical set')}{agent.region ? ` · ${agent.region}` : ''}</p>
                       <button type="button"
                         onClick={() => updateAgent(agent.id, { schedule: agent.schedule === 'nightly' ? 'off' : 'nightly' })}
                         className={`mt-1 text-xs font-semibold rounded-full px-2 py-0.5 focus-visible:ring-2 focus-visible:ring-brand-500 ${agent.schedule === 'nightly' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}

@@ -15,6 +15,88 @@ const TABS: { key: Tab; label: string }[] = [
 
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
+const OpportunityCard: React.FC<{ p: Proposal }> = ({ p }) => {
+  const { decideProposal } = useApp();
+  const [open, setOpen] = useState(false);
+  const d = p.data ?? {};
+  return (
+    <article className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4" aria-labelledby={`p-${p.id}`}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 max-w-3xl">
+          <p className="text-sm text-slate-500 mb-1">Opportunity · {d.vertical}</p>
+          <h2 id={`p-${p.id}`} className="text-xl font-serif font-bold text-slate-900">{p.title}</h2>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl font-bold text-slate-900">{money(d.estimatedCommissionLow ?? 0)}–{money(d.estimatedCommissionHigh ?? 0)}</p>
+          <p className="text-sm text-slate-500">{String(d.payoutModel ?? '').replace(/_/g, ' ')} · ticket {d.typicalTicket}</p>
+          <p className="text-sm text-slate-500">novelty {d.noveltyScore} · fit {d.fitScore}</p>
+        </div>
+      </div>
+
+      <p className="text-slate-800">{d.whyItPays}</p>
+      <p className="text-sm text-slate-600">Sales cycle: {d.salesCycle}</p>
+
+      <div className="grid md:grid-cols-2 gap-4 text-sm">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <p className="font-semibold text-emerald-900 mb-1">Found on the web</p>
+          <ul className="list-disc pl-5 text-emerald-900 space-y-1">{(d.sourced ?? []).map((x: string, i: number) => <li key={i} className="break-words">{x}</li>)}</ul>
+          {(!d.sourced || d.sourced.length === 0) && <p className="text-emerald-900">Nothing sourced — this is entirely a hypothesis.</p>}
+        </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <p className="font-semibold text-slate-900 mb-1">The agent's reasoning (not verified)</p>
+          <ul className="list-disc pl-5 text-slate-700 space-y-1">{(d.hypothesis ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+        </div>
+      </div>
+
+      {Array.isArray(d.risks) && d.risks.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+          <p className="font-semibold text-amber-900 mb-1">Risks</p>
+          <ul className="list-disc pl-5 text-amber-900 space-y-1">{d.risks.map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>
+        </div>
+      )}
+
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        className="flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded">
+        {open ? <ChevronUp className="w-4 h-4" aria-hidden /> : <ChevronDown className="w-4 h-4" aria-hidden />}
+        {open ? 'Hide' : 'Show'} anchor programs and channel fit
+      </button>
+      {open && (
+        <div className="grid md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="font-semibold text-slate-900 mb-1">Programs that anchor this</p>
+            <ul className="space-y-2">
+              {(d.anchorPrograms ?? []).map((a: any, i: number) => (
+                <li key={i}>
+                  {a.url ? <a href={a.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline inline-flex items-center gap-1">{a.name} <ExternalLink className="w-3 h-3" aria-hidden /></a> : <span className="font-medium">{a.name}</span>}
+                  <span className="text-slate-600"> — {a.note}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="font-semibold text-slate-900 mb-1">Your channels</p>
+            <ul className="list-disc pl-5 text-slate-700 space-y-1">{(d.channelFit ?? []).map((c: string, i: number) => <li key={i}>{c}</li>)}</ul>
+          </div>
+        </div>
+      )}
+
+      {p.status === 'awaiting_approval' && (
+        <div className="flex flex-wrap gap-3 pt-2">
+          <button type="button" onClick={() => decideProposal(p.id, 'approved').then(() => toast.success('Researching the actual programs — results will land here'))}
+            className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-500">
+            <CheckCircle2 className="w-4 h-4" aria-hidden /> Worth it — find the real programs
+          </button>
+          <button type="button" onClick={() => decideProposal(p.id, 'rejected').then(() => toast.info('Skipped'))}
+            className="inline-flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-500">
+            <XCircle className="w-4 h-4" aria-hidden /> Not for me
+          </button>
+        </div>
+      )}
+      {p.status === 'approved' && <p className="text-sm text-slate-600">Approved — the research agent is finding and verifying the actual programs. They'll appear as separate cards.</p>}
+    </article>
+  );
+};
+
 const ProgramCard: React.FC<{ p: Proposal }> = ({ p }) => {
   const { decideProposal } = useApp();
   const [open, setOpen] = useState(false);
@@ -216,13 +298,13 @@ const Approvals: React.FC = () => {
             <p className="text-slate-700 font-medium">Nothing here yet.</p>
             <p className="text-slate-500 text-sm mt-1">
               {tab === 'awaiting_approval'
-                ? 'Set an agent to run nightly with a vertical, or start a research task from Workflows.'
+                ? 'Deploy a scout agent on the Agents page and let it run overnight, or start a task from Workflows.'
                 : 'Decisions you make will show up in this tab.'}
             </p>
           </div>
         ) : (
           <div className="space-y-6">
-            {shown.map((p) => p.type === 'affiliate_program' ? <ProgramCard key={p.id} p={p} /> : <ContentCard key={p.id} p={p} />)}
+            {shown.map((p) => p.type === 'opportunity' ? <OpportunityCard key={p.id} p={p} /> : p.type === 'affiliate_program' ? <ProgramCard key={p.id} p={p} /> : <ContentCard key={p.id} p={p} />)}
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import { runResearch, ResearchInput } from './skills/research';
 import { runApplicationPrep, applicantProfileFromEnv } from './skills/applicationPrep';
 import { runMarketing } from './skills/marketing';
 import { runLlmPrompt, LlmPromptInput } from './skills/llmPrompt';
+import { runScout, ScoutInput } from './skills/scout';
 
 const MAX_ATTEMPTS = 2;
 
@@ -33,6 +34,11 @@ function validateTask(task: WorkflowTask) {
   }
   if (!task.skill) throw new Error('Task has no skill.');
   if (task.input == null || typeof task.input !== 'object') throw new Error('Task input must be an object.');
+}
+
+async function alreadyProposedTitles(ownerUid: string, type: Proposal['type']): Promise<string[]> {
+  const snap = await db.collection('proposals').where('ownerUid', '==', ownerUid).where('type', '==', type).limit(200).get();
+  return snap.docs.map((d) => (d.data() as Proposal).title);
 }
 
 async function alreadyProposedPrograms(ownerUid: string): Promise<string[]> {
@@ -66,6 +72,27 @@ async function executeSkill(ctx: TaskContext): Promise<{ result: unknown; awaiti
   const { task } = ctx;
 
   switch (task.skill) {
+    case 'opportunity_scout': {
+      const input = task.input as unknown as ScoutInput;
+      await ctx.step(20, 'Scanning the market for high-ticket commission opportunities…');
+      const exclude = [...(input.exclude || []), ...(await alreadyProposedTitles(task.ownerUid, 'opportunity'))];
+      const scan = await runScout({ ...input, exclude });
+      await ctx.step(70, `${scan.opportunities.length} opportunit${scan.opportunities.length === 1 ? 'y' : 'ies'} found. Writing them up…`, 'success');
+      const ids: string[] = [];
+      for (const o of scan.opportunities) {
+        const id = await createProposal(ctx, {
+          type: 'opportunity',
+          agentId: task.agentId,
+          campaignId: task.campaignId,
+          title: o.thesis,
+          summary: `${o.vertical} — $${Math.round(o.estimatedCommissionLow).toLocaleString()}–$${Math.round(o.estimatedCommissionHigh).toLocaleString()} ${o.payoutModel.replace(/_/g, ' ')} · novelty ${o.noveltyScore} · fit ${o.fitScore}`,
+          data: { ...o, region: input.region || 'United States', minCommission: input.minCommission ?? 1000 },
+        });
+        if (id) ids.push(id);
+      }
+      return { result: { proposalIds: ids, count: scan.opportunities.length, passedOn: scan.passedOn, constraintsUnderstood: scan.constraintsUnderstood }, awaitingApproval: ids.length > 0 };
+    }
+
     case 'affiliate_research': {
       const input = task.input as unknown as ResearchInput;
       if (!input.vertical) throw new Error('affiliate_research needs input.vertical');

@@ -7,12 +7,25 @@ First built in Google Colab. The agents do research and drafting; you make every
 ## How it works
 
 ```
-Agents page            set a vertical ("residential solar"), region, payout floor, nightly on/off
+Agents page            two kinds of agent, both can run nightly:
+                         scout    — "find high-ticket things I haven't thought of"
+                         vertical — "research this category I named"
       │
       ▼  every night at 02:00 America/Denver  (or "Run" on the Workflows page)
-nightlyRun ──► workflow_tasks/{id}  skill: affiliate_research
+nightlyRun ──► workflow_tasks   skill: opportunity_scout   (scout agents)
+                                skill: affiliate_research  (vertical agents)
       │
       ▼  executeWorkflowTask
+Scout skill            model + web search across B2B equipment, infrastructure, energy,
+                       regulated referral fees, high-ticket services… → 3–10 theses, each
+                       split into "found on the web" vs "the agent's reasoning", with
+                       payout model, ticket size, sales cycle, risks, novelty + fit scores
+      │
+      ▼
+proposals type: opportunity   ◄── Approvals: "Worth it — find the real programs"
+      │
+      │  you approve a thesis → its vertical becomes a research task
+      ▼
 Research skill         pass 1: model + web search → 3–10 candidate programs
                        pass 2: fetch each program's real page (HTTP, headless Chromium
                        if JS-rendered), re-extract payout / cookie / rules from the text,
@@ -49,6 +62,7 @@ The page reader only reads public pages — it never logs in to a network direct
 
 | Skill | Input | Output |
 |---|---|---|
+| `opportunity_scout` | `minCommission`, `channels`, `region`, `avoid`, `notes` | one `proposals` doc per thesis |
 | `affiliate_research` | `vertical`, `region`, `minPayout`, `notes` | one `proposals` doc per program |
 | `application_prep` | `program`, `proposalId` | drafted answers attached to that proposal |
 | `marketing_content` | `program`, `audience`, `channels`, `marketingProjectId` | one `proposals` doc with the content |
@@ -90,7 +104,8 @@ Any skill can be queued from the Workflows page, the nightly scheduler, or the w
 cd functions
 cp .env.example .env      # fill in: GEMINI_API_KEY (or ANTHROPIC_API_KEY), OWNER_UID, APPLICANT_*
 npm install
-npm run dryrun -- "residential solar installation" "Colorado, US"   # local test, no Firebase needed
+npm run dryrun -- scout 1000 "United States"                        # open-ended scout, local, no Firebase
+npm run dryrun -- "residential solar installation" "Colorado, US"   # research one vertical
 ```
 
 `APPLICANT_NAME / WEBSITE / TRAFFIC_SUMMARY` are what the application-prep skill is allowed to say about you. Keep them true — networks check.
@@ -133,7 +148,7 @@ Revenue: `affiliateSales` is manual entry from your network dashboards. Nothing 
 │   ├── src/runner.ts       task lifecycle, retries, proposal creation
 │   ├── src/llm.ts          Gemini / Anthropic, JSON + zod validation
 │   ├── src/fetchPage.ts    read a public page as text; browser only when needed
-│   ├── src/skills/         research (two-pass), applicationPrep, marketing, llmPrompt
+│   ├── src/skills/         scout, research (two-pass), applicationPrep, marketing, llmPrompt
 │   ├── src/cli.ts          `npm run dryrun` local harness
 │   └── .env.example
 ├── firestore.rules         owner-only access

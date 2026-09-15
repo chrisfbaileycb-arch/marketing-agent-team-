@@ -241,7 +241,8 @@ const Workflows: React.FC = () => {
     const agent = agents.find(a => a.id === selectedAgent);
     const campaign = campaigns.find(c => c.id === selectedCampaign);
     if (!agent || !campaign) return;
-    if (!agent.vertical) {
+    const isScout = agent.mode === 'scout';
+    if (!isScout && !agent.vertical) {
       toast.error(`Agent "${agent.name}" has no vertical set. Edit the agent and give it one (e.g. "residential solar").`);
       return;
     }
@@ -249,15 +250,17 @@ const Workflows: React.FC = () => {
     setIsExecuting(true);
     setExecutionProgress(0);
     clearWorkflowLogs();
-    addWorkflowLog('info', `Queuing research task for ${agent.name}: ${agent.vertical} (${agent.region || 'US'})`);
+    addWorkflowLog('info', isScout ? `Queuing market scout for ${agent.name} ($${agent.minPayout ?? 1000}+ commissions, ${agent.region || 'US'})` : `Queuing research task for ${agent.name}: ${agent.vertical} (${agent.region || 'US'})`);
 
     try {
       const taskId = await enqueueTask({
-        skill: 'affiliate_research',
+        skill: isScout ? 'opportunity_scout' : 'affiliate_research',
         agentId: agent.id,
         campaignId: campaign.id,
         dryRun: !headless,
-        input: { vertical: agent.vertical, region: agent.region || 'United States', minPayout: agent.minPayout ?? campaign.payout ?? 100, notes: agent.notes || '' },
+        input: isScout
+          ? { minCommission: agent.minPayout ?? 1000, region: agent.region || 'United States', notes: agent.notes || '' }
+          : { vertical: agent.vertical, region: agent.region || 'United States', minPayout: agent.minPayout ?? campaign.payout ?? 100, notes: agent.notes || '' },
       });
       addWorkflowLog('success', `Task queued. ID: ${taskId}`);
       setCurrentStepText('Waiting for the backend…');
@@ -277,8 +280,8 @@ const Workflows: React.FC = () => {
         if (data.status === 'awaiting_approval' || data.status === 'completed') {
           setIsExecuting(false);
           const n = data.result?.count ?? 0;
-          addWorkflowLog('success', n ? `${n} program(s) found — review them on the Approvals page.` : 'Task completed.');
-          toast.success(n ? `${n} programs ready for your review` : 'Task completed');
+          addWorkflowLog('success', n ? `${n} ${isScout ? 'opportunit' + (n === 1 ? 'y' : 'ies') : 'program(s)'} found — review on the Approvals page.` : 'Task completed.');
+          toast.success(n ? `${n} ready for your review` : 'Task completed');
           unsubscribe();
         } else if (data.status === 'failed') {
           setIsExecuting(false);
