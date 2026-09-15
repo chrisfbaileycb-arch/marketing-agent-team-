@@ -139,7 +139,7 @@ export const nightlyRun = functions
           skill: 'opportunity_scout',
           agentId: doc.id,
           campaignId: a.campaignId || undefined,
-          input: { minCommission: a.minPayout ?? 250, region: a.region || 'United States', notes: a.notes || '', channels: a.channels || undefined },
+          input: { minCommission: a.minPayout ?? 250, region: a.region || 'United States', notes: a.notes || '', intel: a.intel || '', channels: a.channels || undefined },
         });
         queued++;
         continue;

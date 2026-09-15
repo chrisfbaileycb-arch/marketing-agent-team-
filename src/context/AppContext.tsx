@@ -11,7 +11,7 @@ import { auth, db } from '../firebase';
 // ---------------------------------------------------------------------------
 export interface Agent {
   id: string; name: string; status: 'active' | 'idle' | 'paused' | 'running'; efficiency: number; campaignId?: string;
-  schedule?: 'nightly' | 'off'; mode?: 'vertical' | 'scout'; vertical?: string; region?: string; minPayout?: number; notes?: string; channels?: string[];
+  schedule?: 'nightly' | 'off'; mode?: 'vertical' | 'scout'; vertical?: string; region?: string; minPayout?: number; notes?: string; intel?: string; channels?: string[];
 }
 export interface Campaign { id: string; name: string; budget: number; payout: number; status: 'active' | 'paused'; bannerUrl?: string }
 export interface Offer {

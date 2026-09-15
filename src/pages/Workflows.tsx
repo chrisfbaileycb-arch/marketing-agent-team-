@@ -259,7 +259,7 @@ const Workflows: React.FC = () => {
         campaignId: campaign.id,
         dryRun: !headless,
         input: isScout
-          ? { minCommission: agent.minPayout ?? 250, region: agent.region || 'United States', notes: agent.notes || '' }
+          ? { minCommission: agent.minPayout ?? 250, region: agent.region || 'United States', notes: agent.notes || '', intel: agent.intel || '' }
           : { vertical: agent.vertical, region: agent.region || 'United States', minPayout: agent.minPayout ?? campaign.payout ?? 100, notes: agent.notes || '' },
       });
       addWorkflowLog('success', `Task queued. ID: ${taskId}`);

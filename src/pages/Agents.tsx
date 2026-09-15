@@ -14,6 +14,7 @@ const Agents: React.FC = () => {
   const [minPayout, setMinPayout] = useState('100');
   const [nightly, setNightly] = useState(true);
   const [mode, setMode] = useState<'vertical' | 'scout'>('scout');
+  const [intel, setIntel] = useState('');
   const [showSpendForm, setShowSpendForm] = useState<string | null>(null);
   const [spendAmount, setSpendAmount] = useState('');
   const [spendReason, setSpendReason] = useState('');
@@ -28,9 +29,9 @@ const Agents: React.FC = () => {
       toast.error('Give the agent a vertical to research (e.g. "residential solar").');
       return;
     }
-    addAgent(name, { mode, vertical: mode === 'vertical' ? vertical : '', region, minPayout: parseFloat(minPayout) || (mode === 'scout' ? 250 : 100), schedule: nightly ? 'nightly' : 'off' });
+    addAgent(name, { mode, vertical: mode === 'vertical' ? vertical : '', region, minPayout: parseFloat(minPayout) || (mode === 'scout' ? 250 : 100), schedule: nightly ? 'nightly' : 'off', intel: intel.trim() });
     toast.success(nightly ? 'Agent deployed. It will research overnight; results land on Approvals.' : 'Agent deployed.');
-    setName(''); setVertical('');
+    setName(''); setVertical(''); setIntel('');
     setShowForm(false);
   };
 
@@ -105,6 +106,15 @@ const Agents: React.FC = () => {
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
               </div>
             </div>
+            {mode === 'scout' && (
+              <div>
+                <label htmlFor="agent-intel" className="block text-sm font-bold text-slate-700 mb-2">Things you've seen that it should chase down</label>
+                <textarea id="agent-intel" value={intel} onChange={(e) => setIntel(e.target.value)} rows={3}
+                  placeholder="e.g. Intuit developer portal offered $500 per QuickBooks signup in July — check if that's still running and what else is in that partner program"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
+                <p className="text-xs text-slate-500 mt-1">The scout can't see behind partner-portal logins. What you've seen there is the best lead it gets.</p>
+              </div>
+            )}
             <label className="flex items-center gap-3 text-sm text-slate-700">
               <input type="checkbox" checked={nightly} onChange={(e) => setNightly(e.target.checked)} className="w-4 h-4 text-brand-500 border-slate-300 rounded focus:ring-brand-500" />
               Run every night and queue what it finds for my approval
