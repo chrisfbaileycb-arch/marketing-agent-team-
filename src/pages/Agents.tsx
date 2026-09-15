@@ -28,7 +28,7 @@ const Agents: React.FC = () => {
       toast.error('Give the agent a vertical to research (e.g. "residential solar").');
       return;
     }
-    addAgent(name, { mode, vertical: mode === 'vertical' ? vertical : '', region, minPayout: parseFloat(minPayout) || (mode === 'scout' ? 1000 : 100), schedule: nightly ? 'nightly' : 'off' });
+    addAgent(name, { mode, vertical: mode === 'vertical' ? vertical : '', region, minPayout: parseFloat(minPayout) || (mode === 'scout' ? 250 : 100), schedule: nightly ? 'nightly' : 'off' });
     toast.success(nightly ? 'Agent deployed. It will research overnight; results land on Approvals.' : 'Agent deployed.');
     setName(''); setVertical('');
     setShowForm(false);
@@ -73,7 +73,7 @@ const Agents: React.FC = () => {
             <fieldset className="space-y-2">
               <legend className="text-sm font-bold text-slate-700 mb-2">What this agent does</legend>
               <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 has-[:checked]:border-brand-500 has-[:checked]:bg-brand-50 cursor-pointer">
-                <input type="radio" name="mode" value="scout" checked={mode === 'scout'} onChange={() => { setMode('scout'); setMinPayout('1000'); }} className="mt-1" />
+                <input type="radio" name="mode" value="scout" checked={mode === 'scout'} onChange={() => { setMode('scout'); setMinPayout('250'); }} className="mt-1" />
                 <span><span className="font-semibold text-slate-900">Scout for opportunities I haven't thought of</span><br />
                 <span className="text-sm text-slate-600">Scans the whole market for high-ticket commission programs and brings back theses. You approve the ones worth researching.</span></span>
               </label>
@@ -136,7 +136,7 @@ const Agents: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900">{agent.name}</h3>
-                      <p className="text-xs text-slate-500">{agent.mode === 'scout' ? `Scout · $${agent.minPayout ?? 1000}+ commissions` : (agent.vertical || 'No vertical set')}{agent.region ? ` · ${agent.region}` : ''}</p>
+                      <p className="text-xs text-slate-500">{agent.mode === 'scout' ? `Scout · $${agent.minPayout ?? 250}+ commissions` : (agent.vertical || 'No vertical set')}{agent.region ? ` · ${agent.region}` : ''}</p>
                       <button type="button"
                         onClick={() => updateAgent(agent.id, { schedule: agent.schedule === 'nightly' ? 'off' : 'nightly' })}
                         className={`mt-1 text-xs font-semibold rounded-full px-2 py-0.5 focus-visible:ring-2 focus-visible:ring-brand-500 ${agent.schedule === 'nightly' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}

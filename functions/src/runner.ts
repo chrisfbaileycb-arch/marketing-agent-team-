@@ -85,8 +85,8 @@ async function executeSkill(ctx: TaskContext): Promise<{ result: unknown; awaiti
           agentId: task.agentId,
           campaignId: task.campaignId,
           title: o.thesis,
-          summary: `${o.vertical} — $${Math.round(o.estimatedCommissionLow).toLocaleString()}–$${Math.round(o.estimatedCommissionHigh).toLocaleString()} ${o.payoutModel.replace(/_/g, ' ')} · novelty ${o.noveltyScore} · fit ${o.fitScore}`,
-          data: { ...o, region: input.region || 'United States', minCommission: input.minCommission ?? 1000 },
+          summary: `${o.tier.replace('_', ' ')} · ${o.vertical} — $${Math.round(o.estimatedCommissionLow).toLocaleString()}–$${Math.round(o.estimatedCommissionHigh).toLocaleString()} ${o.payoutModel.replace(/_/g, ' ')} · novelty ${o.noveltyScore} · fit ${o.fitScore}`,
+          data: { ...o, region: input.region || 'United States', minCommission: input.minCommission ?? 250 },
         });
         if (id) ids.push(id);
       }

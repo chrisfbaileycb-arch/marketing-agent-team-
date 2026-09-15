@@ -39,7 +39,7 @@ export const onProposalDecided = functions
         skill: 'affiliate_research',
         agentId: after.agentId,
         campaignId: after.campaignId,
-        input: { vertical: o.vertical, region: o.region || 'United States', minPayout: o.minCommission ?? 1000, notes: `Thesis approved by operator: ${o.thesis}` },
+        input: { vertical: o.vertical, region: o.region || 'United States', minPayout: o.minCommission ?? 250, notes: `Thesis approved by operator: ${o.thesis}` },
       });
       functions.logger.info(`[proposal ${id}] opportunity approved → research queued for "${o.vertical}"`);
       return;
@@ -139,7 +139,7 @@ export const nightlyRun = functions
           skill: 'opportunity_scout',
           agentId: doc.id,
           campaignId: a.campaignId || undefined,
-          input: { minCommission: a.minPayout ?? 1000, region: a.region || 'United States', notes: a.notes || '', channels: a.channels || undefined },
+          input: { minCommission: a.minPayout ?? 250, region: a.region || 'United States', notes: a.notes || '', channels: a.channels || undefined },
         });
         queued++;
         continue;

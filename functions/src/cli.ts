@@ -21,7 +21,7 @@ async function main() {
   if (args[0] === 'scout') {
     const { runScout } = await import('./skills/scout');
     console.error(`Scouting via ${process.env.LLM_PROVIDER || 'gemini'}…`);
-    const out = await runScout({ minCommission: Number(args[1] || 1000), region: args[2] || 'United States' });
+    const out = await runScout({ minCommission: Number(args[1] || 250), region: args[2] || 'United States' });
     console.log(JSON.stringify(out, null, 2));
     return;
   }

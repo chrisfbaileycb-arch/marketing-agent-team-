@@ -17,6 +17,8 @@ export const OpportunitySchema = z.object({
   risks: z.array(z.string()).describe('Regulatory, approval-bar, saturation, fraud-adjacent traps'),
   noveltyScore: z.number().min(0).max(100).describe('How unlikely a solo operator is to have thought of this'),
   fitScore: z.number().min(0).max(100),
+  tier: z.enum(['bounty', 'mid_ticket', 'high_ticket']).describe('bounty: $100–$1k, short cycle, often B2B SaaS/fintech referral programs; mid_ticket: $1k–$5k; high_ticket: $5k+'),
+  stacksWithClientBase: z.boolean().describe('True if this is something the operator would naturally recommend to a marketing client (bookkeeping, payroll, CRM, phones) and get paid for'),
 });
 export type Opportunity = z.infer<typeof OpportunitySchema>;
 
@@ -40,7 +42,11 @@ const SYSTEM = `You are a market scout for a one-person affiliate / commission-s
 Your job is NOT to research a category the operator already named. It is to find high-payout commission opportunities the operator would not think to search for, then hand each one off as a named vertical.
 
 How to think:
-- Start from where money is large and margins are real: B2B equipment, infrastructure, energy, financial products with regulated referral fees, high-ticket home services, industrial software, franchising, commercial insurance, medical/dental equipment, fleet, logistics.
+- Return a deliberate MIX across three tiers, not just the biggest number:
+    bounty ($100–$1k, 30-day cycle): B2B SaaS and fintech referral/partner programs — accounting, payroll, CRM, legal practice management, VoIP, e-signature, merchant services, business banking. These stack: the operator runs marketing for small professional firms and is already the one recommending tools.
+    mid_ticket ($1k–$5k): high-ticket home services leads, commercial insurance, equipment financing referrals, franchise referrals.
+    high_ticket ($5k+): B2B equipment, infrastructure, energy, industrial software, fleet, medical/dental equipment.
+- Partner bounties change quarterly and often differ from the public affiliate program of the same company. Say which program you found and when its terms were published.
 - Look for asymmetries: a regional cost advantage, a regulatory change, a supply shift, a demographic. State the asymmetry as the thesis.
 - For every opportunity, separate what you FOUND (a program page, a payout table, a news item — with URL) from what you REASONED. Put reasoning in "hypothesis". A solo operator will act on this; do not dress up a guess as a fact.
 - Be precise about payout model. "$10,000 commission" and "$10,000 sale with 3% referral fee" and "$10,000 sale that pays $200 per qualified lead" are three different businesses. Say which.
@@ -50,7 +56,8 @@ How to think:
 
 export async function runScout(input: ScoutInput): Promise<ScoutResult> {
   const prompt = `Operator constraints:
-- Minimum commission worth their time: $${input.minCommission ?? 1000} per closed deal or qualified lead
+- Minimum commission worth their time: $${input.minCommission ?? 250} per closed deal, signup, or qualified lead
+- Their current customers are small professional-services firms (e.g. personal-injury law practices) that they market for on retainer — bounties those firms would plausibly sign up for count as a strong fit
 - Channels they can run: ${(input.channels || ['short-form video (TikTok/Reels/Shorts)', 'targeted paid social', 'email', 'landing pages']).join('; ')}
 - Region: ${input.region || 'United States'}
 - Avoid: ${(input.avoid || ['MLM', 'inventory purchase required', 'crypto', 'gambling']).join('; ')}
@@ -61,7 +68,7 @@ Search the web broadly. Come back with 3–10 opportunities the operator would n
 For each, "vertical" must be a phrase the operator can hand to a follow-up researcher, e.g. "GPU colocation and server hardware partner programs".`;
 
   const { data } = await generateJson(ScoutResultSchema, { system: SYSTEM, prompt, search: true, maxTokens: 14000 });
-  const floor = input.minCommission ?? 0;
+  const floor = input.minCommission ?? 250;
   data.opportunities = data.opportunities
     .filter((o) => o.estimatedCommissionHigh >= floor)
     .sort((a, b) => (b.fitScore + b.noveltyScore) - (a.fitScore + a.noveltyScore));

@@ -23,7 +23,7 @@ const OpportunityCard: React.FC<{ p: Proposal }> = ({ p }) => {
     <article className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4" aria-labelledby={`p-${p.id}`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 max-w-3xl">
-          <p className="text-sm text-slate-500 mb-1">Opportunity · {d.vertical}</p>
+          <p className="text-sm text-slate-500 mb-1">{String(d.tier ?? '').replace('_', ' ') || 'Opportunity'} · {d.vertical}{d.stacksWithClientBase ? ' · stacks with your client base' : ''}</p>
           <h2 id={`p-${p.id}`} className="text-xl font-serif font-bold text-slate-900">{p.title}</h2>
         </div>
         <div className="text-right">

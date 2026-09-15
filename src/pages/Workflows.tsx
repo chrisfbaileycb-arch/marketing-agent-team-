@@ -250,7 +250,7 @@ const Workflows: React.FC = () => {
     setIsExecuting(true);
     setExecutionProgress(0);
     clearWorkflowLogs();
-    addWorkflowLog('info', isScout ? `Queuing market scout for ${agent.name} ($${agent.minPayout ?? 1000}+ commissions, ${agent.region || 'US'})` : `Queuing research task for ${agent.name}: ${agent.vertical} (${agent.region || 'US'})`);
+    addWorkflowLog('info', isScout ? `Queuing market scout for ${agent.name} ($${agent.minPayout ?? 250}+ commissions, ${agent.region || 'US'})` : `Queuing research task for ${agent.name}: ${agent.vertical} (${agent.region || 'US'})`);
 
     try {
       const taskId = await enqueueTask({
@@ -259,7 +259,7 @@ const Workflows: React.FC = () => {
         campaignId: campaign.id,
         dryRun: !headless,
         input: isScout
-          ? { minCommission: agent.minPayout ?? 1000, region: agent.region || 'United States', notes: agent.notes || '' }
+          ? { minCommission: agent.minPayout ?? 250, region: agent.region || 'United States', notes: agent.notes || '' }
           : { vertical: agent.vertical, region: agent.region || 'United States', minPayout: agent.minPayout ?? campaign.payout ?? 100, notes: agent.notes || '' },
       });
       addWorkflowLog('success', `Task queued. ID: ${taskId}`);
