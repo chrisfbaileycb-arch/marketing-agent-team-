@@ -4,7 +4,7 @@ import { db, FieldValue, Timestamp, Proposal, AffiliateProgram, WorkflowTask } f
 import { runTask, enqueueTask } from './runner';
 
 const REGION = 'us-central1';
-const runtime = { memory: '1GB' as const, timeoutSeconds: 540 };
+const runtime = { memory: '2GB' as const, timeoutSeconds: 540 };  // 2GB: headless Chromium fallback in the page reader
 
 // ---------------------------------------------------------------------------
 // 1. Task runner — fires when the front end (or anything else) adds a task.

@@ -71,7 +71,7 @@ async function executeSkill(ctx: TaskContext): Promise<{ result: unknown; awaiti
       if (!input.vertical) throw new Error('affiliate_research needs input.vertical');
       await ctx.step(20, `Researching ${input.vertical} programs in ${input.region || 'the US'}…`);
       const exclude = [...(input.excludePrograms || []), ...(await alreadyProposedPrograms(task.ownerUid))];
-      const research = await runResearch({ ...input, excludePrograms: exclude });
+      const research = await runResearch({ ...input, excludePrograms: exclude }, (m) => ctx.step(45, m));
       await ctx.step(70, `Found ${research.programs.length} programs. Writing them up for your review…`, 'success');
 
       const ids: string[] = [];

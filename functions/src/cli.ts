@@ -18,7 +18,7 @@ async function main() {
   const [vertical = 'residential solar installation', region = 'Colorado, US'] = process.argv.slice(2);
   const { runResearch } = await import('./skills/research');
   console.error(`Researching "${vertical}" in ${region} via ${process.env.LLM_PROVIDER || 'gemini'}…`);
-  const out = await runResearch({ vertical, region, minPayout: 100 });
+  const out = await runResearch({ vertical, region, minPayout: 100 }, (m) => console.error('  ' + m));
   console.log(JSON.stringify(out, null, 2));
 }
 main().catch((e) => { console.error(e); process.exit(1); });

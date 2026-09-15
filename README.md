@@ -13,8 +13,10 @@ Agents page            set a vertical ("residential solar"), region, payout floo
 nightlyRun ──► workflow_tasks/{id}  skill: affiliate_research
       │
       ▼  executeWorkflowTask
-Research skill         model + web search → 3–10 real programs with sourced payouts,
-                       approval requirements, compliance notes, fit score
+Research skill         pass 1: model + web search → 3–10 candidate programs
+                       pass 2: fetch each program's real page (HTTP, headless Chromium
+                       if JS-rendered), re-extract payout / cookie / rules from the text,
+                       re-score. Unreadable pages cap the fit score at 40.
       │
       ▼
 proposals/{id}         status: awaiting_approval          ◄── Approvals page
@@ -41,7 +43,7 @@ Marketing skill        landing page, 4-email sequence, social posts, FTC disclos
 onProposalDecided ──► POST to the connected marketing project's webhookUrl
 ```
 
-Nothing is submitted to a third party by the agent. The two actions that legally have to be you — signing up with a network, and publishing content — stay with you. The agent removes the 90% around them.
+The page reader only reads public pages — it never logs in to a network directory or submits a form. Nothing is submitted to a third party by the agent. The two actions that legally have to be you — signing up with a network, and publishing content — stay with you. The agent removes the 90% around them.
 
 ### Skills
 
@@ -70,7 +72,7 @@ Any skill can be queued from the Workflows page, the nightly scheduler, or the w
 
 **Front end:** React 19, TypeScript 5.8, Vite 7, Tailwind CSS 3, Radix UI Themes, Framer Motion, Recharts, React Router v6, Firebase JS SDK (Auth + Firestore).
 
-**Backend:** Firebase Cloud Functions (Node 20), Firestore, and a pluggable model layer — Gemini by default (AI Studio key, Google Search grounding) or Anthropic (`LLM_PROVIDER=anthropic`, web search tool). Structured outputs are validated with zod before anything is written.
+**Backend:** Firebase Cloud Functions (Node 20, 2 GB), Firestore, a page reader (fetch → `playwright-core` + `@sparticuz/chromium` fallback, read-only: no clicks, no logins), and a pluggable model layer — Gemini by default (AI Studio key, Google Search grounding) or Anthropic (`LLM_PROVIDER=anthropic`, web search tool). Structured outputs are validated with zod before anything is written.
 
 ## Setup
 
@@ -130,7 +132,8 @@ Revenue: `affiliateSales` is manual entry from your network dashboards. Nothing 
 │   ├── src/index.ts        executeWorkflowTask, onProposalDecided, nightlyRun, webhookTrigger
 │   ├── src/runner.ts       task lifecycle, retries, proposal creation
 │   ├── src/llm.ts          Gemini / Anthropic, JSON + zod validation
-│   ├── src/skills/         research, applicationPrep, marketing, llmPrompt
+│   ├── src/fetchPage.ts    read a public page as text; browser only when needed
+│   ├── src/skills/         research (two-pass), applicationPrep, marketing, llmPrompt
 │   ├── src/cli.ts          `npm run dryrun` local harness
 │   └── .env.example
 ├── firestore.rules         owner-only access
