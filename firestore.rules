@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Single-operator tool. Replace OWNER_UID below with your Firebase Auth UID
+    // (shown on the Profile page after you sign in). Everyone else is denied.
+    function isOwner() {
+      return request.auth != null && request.auth.uid == "OWNER_UID";
+    }
+
+    // Owner can read/write everything they own; documents must carry ownerUid.
+    match /{collection}/{docId} {
+      allow read: if isOwner() && resource.data.ownerUid == request.auth.uid;
+      allow create: if isOwner() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isOwner() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Per-user settings doc keyed by uid.
+    match /users/{uid} {
+      allow read, write: if isOwner() && uid == request.auth.uid;
+    }
+  }
+}

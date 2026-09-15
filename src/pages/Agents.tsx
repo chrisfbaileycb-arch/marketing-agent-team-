@@ -6,9 +6,13 @@ import Layout from '../components/Layout';
 import { useApp } from '../context/AppContext';
 
 const Agents: React.FC = () => {
-  const { agents, campaigns, addAgent, deleteAgent, requestAdSpend } = useApp();
+  const { agents, campaigns, addAgent, deleteAgent, updateAgent, requestAdSpend } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
+  const [vertical, setVertical] = useState('');
+  const [region, setRegion] = useState('United States');
+  const [minPayout, setMinPayout] = useState('100');
+  const [nightly, setNightly] = useState(true);
   const [showSpendForm, setShowSpendForm] = useState<string | null>(null);
   const [spendAmount, setSpendAmount] = useState('');
   const [spendReason, setSpendReason] = useState('');
@@ -19,9 +23,13 @@ const Agents: React.FC = () => {
       toast.error('Please enter an agent name.');
       return;
     }
-    addAgent(name);
-    toast.success('Agent deployed successfully.');
-    setName('');
+    if (!vertical) {
+      toast.error('Give the agent a vertical to research (e.g. "residential solar").');
+      return;
+    }
+    addAgent(name, { vertical, region, minPayout: parseFloat(minPayout) || 100, schedule: nightly ? 'nightly' : 'off' });
+    toast.success(nightly ? 'Agent deployed. It will research overnight; results land on Approvals.' : 'Agent deployed.');
+    setName(''); setVertical('');
     setShowForm(false);
   };
 
@@ -61,16 +69,32 @@ const Agents: React.FC = () => {
             className="bg-white rounded-3xl border border-slate-100 p-8 space-y-6"
           >
             <h2 className="text-xl font-bold text-slate-900">Deploy New Agent</h2>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Agent Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Scout Delta"
-                className="w-full max-w-md px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all"
-              />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="agent-name" className="block text-sm font-bold text-slate-700 mb-2">Agent name</label>
+                <input id="agent-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Solar Scout"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
+              </div>
+              <div>
+                <label htmlFor="agent-vertical" className="block text-sm font-bold text-slate-700 mb-2">What it researches</label>
+                <input id="agent-vertical" type="text" value={vertical} onChange={(e) => setVertical(e.target.value)} placeholder="e.g. residential solar installation"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
+              </div>
+              <div>
+                <label htmlFor="agent-region" className="block text-sm font-bold text-slate-700 mb-2">Region</label>
+                <input id="agent-region" type="text" value={region} onChange={(e) => setRegion(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
+              </div>
+              <div>
+                <label htmlFor="agent-minpayout" className="block text-sm font-bold text-slate-700 mb-2">Ignore programs paying less than ($)</label>
+                <input id="agent-minpayout" type="number" min="0" value={minPayout} onChange={(e) => setMinPayout(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all" />
+              </div>
             </div>
+            <label className="flex items-center gap-3 text-sm text-slate-700">
+              <input type="checkbox" checked={nightly} onChange={(e) => setNightly(e.target.checked)} className="w-4 h-4 text-brand-500 border-slate-300 rounded focus:ring-brand-500" />
+              Run every night and queue what it finds for my approval
+            </label>
             <div className="flex gap-3">
               <button type="submit" className="bg-brand-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-600 transition-all">
                 Deploy
@@ -98,7 +122,13 @@ const Agents: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900">{agent.name}</h3>
-                      <p className="text-xs text-slate-400 font-mono">{agent.id}</p>
+                      <p className="text-xs text-slate-500">{agent.vertical || 'No vertical set'}{agent.region ? ` · ${agent.region}` : ''}</p>
+                      <button type="button"
+                        onClick={() => updateAgent(agent.id, { schedule: agent.schedule === 'nightly' ? 'off' : 'nightly' })}
+                        className={`mt-1 text-xs font-semibold rounded-full px-2 py-0.5 focus-visible:ring-2 focus-visible:ring-brand-500 ${agent.schedule === 'nightly' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                        aria-pressed={agent.schedule === 'nightly'}>
+                        {agent.schedule === 'nightly' ? 'Nightly run on' : 'Nightly run off'}
+                      </button>
                     </div>
                   </div>
                   <button 

@@ -1,26 +1,25 @@
 {
   "name": "functions",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": { "node": "20" },
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "serve": "npm run build && firebase emulators:start --only functions",
+    "serve": "npm run build && firebase emulators:start --only functions,firestore",
     "shell": "npm run build && firebase functions:shell",
-    "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "dryrun": "npm run build && node lib/cli.js"
   },
-  "engines": {
-    "node": "18"
-  },
-  "main": "lib/index.js",
   "dependencies": {
-    "firebase-admin": "^11.8.0",
-    "firebase-functions": "^4.3.1",
-    "playwright": "^1.42.1"
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@google/genai": "^1.9.0",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^4.9.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^4.9.0",
-    "firebase-functions-test": "^3.1.0"
-  },
-  "private": true
+    "typescript": "^5.6.3"
+  }
 }

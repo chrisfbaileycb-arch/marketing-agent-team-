@@ -1,105 +1,119 @@
 # Money-Making Team
 
-An agent-orchestration dashboard for affiliate-marketing workflows. The React front end lets you define agents, campaigns, workflows, skills and HTTPS access layers; a Firebase Cloud Function picks up queued workflow tasks from Firestore and runs them through a Playwright browser session.
+A personal agent-orchestration tool for affiliate marketing. Agents research affiliate programs overnight, draft the applications, and write the campaign content; every step lands in an approval queue and waits for you.
 
-First built in Google Colab. This is an early prototype: the UI is complete, the backend launches a real browser session, but the "skill" branches are stubbed and the commission figures it writes back are simulated (see [Current status](#current-status)).
+First built in Google Colab. The agents do research and drafting; you make every decision that touches money, a signup form, or a publish button.
 
-## Architecture
+## How it works
 
 ```
-Browser (React + Vite)
-  └─ src/pages/*          route-level screens
-  └─ src/context/         AppContext — in-app state for agents, campaigns, workflows, layers
-  └─ src/firebase.ts      Firebase Auth + Firestore client (config is a placeholder)
-        │
-        ▼  writes a document to  workflow_tasks/{taskId}
-Firestore
-        │
-        ▼  onCreate trigger
-functions/src/index.ts    executeWorkflowTask
-  ├─ performSafetyCheck   requires targetAgentId + targetCampaignId
-  ├─ chromium.launch      Playwright, 2 GB / 300 s
-  ├─ executeSkillAction   routes on the skill name, navigates to targetUrl
-  └─ writes status / progress / commissionGenerated back to the task doc
+Agents page            set a vertical ("residential solar"), region, payout floor, nightly on/off
+      │
+      ▼  every night at 02:00 America/Denver  (or "Run" on the Workflows page)
+nightlyRun ──► workflow_tasks/{id}  skill: affiliate_research
+      │
+      ▼  executeWorkflowTask
+Research skill         model + web search → 3–10 real programs with sourced payouts,
+                       approval requirements, compliance notes, fit score
+      │
+      ▼
+proposals/{id}         status: awaiting_approval          ◄── Approvals page
+      │
+      │  you click "Approve and draft application"
+      ▼
+onProposalDecided ──► offers/{id} created  +  workflow_tasks  skill: application_prep
+      │
+      ▼
+Application prep       drafts every answer the network's form will ask, plus a
+                       pre-apply checklist and a "don't do this" list — attached to the proposal
+      │
+      │  you open the signup page, paste the answers, submit, click "I submitted the application"
+      ▼
+proposals status: applied
+      │
+      │  once the network approves you: Workflows → run marketing_content for that program
+      ▼
+Marketing skill        landing page, 4-email sequence, social posts, FTC disclosure,
+                       TCPA consent text → proposals (awaiting_approval)
+      │
+      │  you approve
+      ▼
+onProposalDecided ──► POST to the connected marketing project's webhookUrl
 ```
+
+Nothing is submitted to a third party by the agent. The two actions that legally have to be you — signing up with a network, and publishing content — stay with you. The agent removes the 90% around them.
+
+### Skills
+
+| Skill | Input | Output |
+|---|---|---|
+| `affiliate_research` | `vertical`, `region`, `minPayout`, `notes` | one `proposals` doc per program |
+| `application_prep` | `program`, `proposalId` | drafted answers attached to that proposal |
+| `marketing_content` | `program`, `audience`, `channels`, `marketingProjectId` | one `proposals` doc with the content |
+| `llm_prompt` | `prompt`, `system`, `variables`, `search` | text result on the task |
+
+Any skill can be queued from the Workflows page, the nightly scheduler, or the webhook endpoint (`POST /webhookTrigger?token=…` with `{ "skill": "...", ...input }`). Set `dryRun: true` on a task (or turn "Write results" off on Workflows) to log what would happen without creating proposals.
 
 ### Routes
 
 | Path | Screen |
 |---|---|
-| `/` | Home — overview dashboard |
-| `/campaigns` | Campaign management |
-| `/agents` | Agent roster |
-| `/workflows` | Workflow builder, project connections, webhook triggers |
-| `/marketplace` | Skill / agent discovery |
-| `/skills` | Skill definitions |
-| `/https-layers` | Proxy / access-layer configuration (API-key gating per surface) |
+| `/` | Home — overview |
+| `/agents` | Agents — vertical, region, payout floor, nightly schedule |
+| `/campaigns` | Campaigns |
+| `/workflows` | Run a research task now; incoming webhooks; connected marketing projects |
+| `/approvals` | **The queue.** Everything the agents found, waiting for you |
+| `/marketplace` | Approved programs (populated by approvals, not seed data) |
+| `/skills`, `/https-layers` | Existing screens, unchanged |
 
 ## Tech stack
 
-**Front end:** React 19, TypeScript 5.8, Vite 7, Tailwind CSS 3, Radix UI Themes, Framer Motion, Recharts, React Router v6, react-hook-form + zod, react-toastify, Firebase JS SDK, Supabase JS (installed, not yet wired).
+**Front end:** React 19, TypeScript 5.8, Vite 7, Tailwind CSS 3, Radix UI Themes, Framer Motion, Recharts, React Router v6, Firebase JS SDK (Auth + Firestore).
 
-**Backend:** Firebase Cloud Functions (Node 18), firebase-admin, Playwright (Chromium).
+**Backend:** Firebase Cloud Functions (Node 20), Firestore, and a pluggable model layer — Gemini by default (AI Studio key, Google Search grounding) or Anthropic (`LLM_PROVIDER=anthropic`, web search tool). Structured outputs are validated with zod before anything is written.
 
-## Getting started
+## Setup
 
-### Prerequisites
+### 1. Firebase project
 
-- Node.js 18+ and npm
-- A Firebase project with Firestore and Cloud Functions (Blaze plan — Playwright needs outbound network access)
-- Firebase CLI: `npm i -g firebase-tools`
+1. Create a project; enable **Authentication → Google**, **Firestore**, and **Functions** (Blaze plan is required for outbound model API calls).
+2. `.firebaserc` — set `projects.default`.
+3. `src/firebase.ts` — paste the web-app config from the console. (Not a secret; access is governed by the rules below.)
+4. Run the app once, sign in with Google, and read your UID from the hover title on your email in the header (or the Auth console).
+5. `firestore.rules` — replace `"OWNER_UID"` with that UID. Every collection is denied to anyone else.
 
-### 1. Front end
-
-```bash
-npm install
-npm run dev        # http://localhost:5173
-npm run build      # production bundle → dist/
-npm run preview    # serve the production bundle locally
-npm run lint
-```
-
-### 2. Firebase configuration
-
-Both of these files ship with placeholders and must be filled in before anything talks to Firebase:
-
-- `.firebaserc` — set `projects.default` to your Firebase project ID.
-- `src/firebase.ts` — replace the `firebaseConfig` object with the web-app config from the Firebase console.
-
-The Firebase web config is safe to commit (it is not a secret; access is governed by Firestore security rules). Do **not** commit service-account JSON or any `.env` file — both are already covered by `.gitignore`.
-
-### 3. Cloud Functions
+### 2. Functions
 
 ```bash
 cd functions
+cp .env.example .env      # fill in: GEMINI_API_KEY (or ANTHROPIC_API_KEY), OWNER_UID, APPLICANT_*
 npm install
-npx playwright install chromium   # local only
-npm run serve                     # build + start the local emulator
-npm run deploy                    # firebase deploy --only functions
+npm run dryrun -- "residential solar installation" "Colorado, US"   # local test, no Firebase needed
 ```
 
-`functions/test-skill.js` is a standalone harness that launches Chromium locally and simulates one skill run without touching Firestore:
+`APPLICANT_NAME / WEBSITE / TRAFFIC_SUMMARY` are what the application-prep skill is allowed to say about you. Keep them true — networks check.
+
+### 3. Deploy
 
 ```bash
-cd functions && node test-skill.js
+npm install && npm run build          # front end → dist/
+firebase deploy                       # rules, indexes, functions, hosting
 ```
 
-## Current status
+Local emulators: `cd functions && npm run serve`.
 
-What works today:
+## Data model
 
-- Full UI across all seven routes, with local state via `AppContext`.
-- Firestore trigger that launches a real headless Chromium session and navigates to the supplied `targetUrl`.
-- Task lifecycle written back to Firestore (`pending → executing → completed | failed`) with progress and logs.
+All documents carry `ownerUid`. Collections: `agents`, `campaigns`, `offers`, `proposals`, `workflow_tasks`, `incomingWebhooks`, `marketingProjects`, `affiliateSales`, `adSpendRequests`, `httpsLayers`, `certificates`, `runs`, `users/{uid}`.
 
-What is still stubbed and should be treated as placeholder logic:
+Revenue: `affiliateSales` is manual entry from your network dashboards. Nothing in the system generates a dollar figure on its own — `commissionGenerated` on tasks is always `0` and exists only for the legacy Workflows log.
 
-- `executeSkillAction` only string-matches the skill name to pick a branch; the branch bodies are `TODO` comments. No form-filling, lead extraction or submission is implemented.
-- `commissionGenerated` is `basePayout + Math.random() * maxBonus`. It is a display number, not money.
-- The log strings in each branch describe intended behaviour, not what the code does.
-- Firestore security rules are not included in this repo.
-- `src/firebase.ts` and `.firebaserc` are placeholders.
-- `@supabase/supabase-js` is a dependency but unused.
+## Known gaps
+
+- `marketingProjects.apiToken` is stored in Firestore (owner-only). Fine for one operator; move to Secret Manager if this is ever shared.
+- Affiliate-network revenue APIs (Impact, CJ, ShareASale) are not wired. The `offers` doc has the fields for it.
+- `Skills` and `HTTPS Layers` pages are UI-only; the layer/cert records persist but nothing enforces them.
+- `package.json` name is still `account-content-recovery-tool`; `scripts/init-git.sh` points at an older remote.
 
 ## Project layout
 
@@ -113,8 +127,14 @@ What is still stubbed and should be treated as placeholder logic:
 │   ├── pages/              one file per route
 │   └── firebase.ts
 ├── functions/
-│   ├── src/index.ts        executeWorkflowTask Cloud Function
-│   └── test-skill.js       local Playwright harness
+│   ├── src/index.ts        executeWorkflowTask, onProposalDecided, nightlyRun, webhookTrigger
+│   ├── src/runner.ts       task lifecycle, retries, proposal creation
+│   ├── src/llm.ts          Gemini / Anthropic, JSON + zod validation
+│   ├── src/skills/         research, applicationPrep, marketing, llmPrompt
+│   ├── src/cli.ts          `npm run dryrun` local harness
+│   └── .env.example
+├── firestore.rules         owner-only access
+├── firestore.indexes.json
 ├── public/
 ├── scripts/init-git.sh     original bootstrap script (points at an older remote)
 ├── firebase.json
