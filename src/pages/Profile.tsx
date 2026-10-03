@@ -1,6 +1,6 @@
 import React from 'react';
     import { motion } from 'framer-motion';
-    import { User, Mail, Shield, Key, LogOut, ExternalLink } from 'lucide-react';
+    import { User, Mail, Shield, Key, LogOut, ExternalLink, ArrowRight } from 'lucide-react';
     import Layout from '../components/Layout';
     import AccountIndicator from '../components/AccountIndicator';
 

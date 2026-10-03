@@ -32,7 +32,7 @@ import {
   Users
 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { useApp, MarketingProject, IncomingWebhook } from '../context/AppContext';
+import { useApp, type MarketingProject, type IncomingWebhook } from '../context/AppContext';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 interface PlatformTemplate {
@@ -153,7 +153,9 @@ const Workflows: React.FC = () => {
     addIncomingWebhook,
     deleteIncomingWebhook,
     toggleIncomingWebhookStatus,
-    recordWebhookTrigger
+    recordWebhookTrigger,
+    enqueueTask,
+    user
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'execution' | 'webhooks'>('execution');
@@ -186,7 +188,6 @@ const Workflows: React.FC = () => {
 
   // Playwright Settings
   const [headless, setHeadless] = useState(true);
-  const [bypassAntiBot, setBypassAntiBot] = useState(true);
   const [autoRetry, setAutoRetry] = useState(true);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -237,55 +238,64 @@ const Workflows: React.FC = () => {
       toast.error('Please select both an Agent and a Campaign to execute.');
       return;
     }
-
     const agent = agents.find(a => a.id === selectedAgent);
     const campaign = campaigns.find(c => c.id === selectedCampaign);
-
     if (!agent || !campaign) return;
+    const isScout = agent.mode === 'scout';
+    if (!isScout && !agent.vertical) {
+      toast.error(`Agent "${agent.name}" has no vertical set. Edit the agent and give it one (e.g. "residential solar").`);
+      return;
+    }
 
     setIsExecuting(true);
     setExecutionProgress(0);
     clearWorkflowLogs();
+    addWorkflowLog('info', isScout ? `Queuing market scout for ${agent.name} ($${agent.minPayout ?? 250}+ commissions, ${agent.region || 'US'})` : `Queuing research task for ${agent.name}: ${agent.vertical} (${agent.region || 'US'})`);
 
-    const steps = [
-      { text: 'Initializing Playwright browser automation engine...', delay: 1500, type: 'info' as const },
-      { text: 'Bypassing Cloudflare anti-bot protection layers...', delay: 1800, type: 'info' as const },
-      { text: `Navigating to affiliate offer page for "${campaign.name}"...`, delay: 1500, type: 'info' as const },
-      { text: 'Extracting high-converting landing page assets and copy...', delay: 2000, type: 'success' as const },
-      { text: 'Connecting to active marketing APIs to sync product catalog...', delay: 1500, type: 'info' as const },
-      { text: 'Generating optimized landing page variants and deploying to secure HTTPS edge...', delay: 2200, type: 'success' as const },
-      { text: 'Analyzing ad spend requirements. Requesting scaling funds...', delay: 1800, type: 'info' as const },
-      { text: 'Launching automated social & search ad campaigns via connected APIs...', delay: 2000, type: 'success' as const },
-      { text: 'Simulating user traffic and tracking conversion funnel...', delay: 2500, type: 'info' as const },
-      { text: 'Affiliate sale detected! Recording commission payout...', delay: 1500, type: 'success' as const }
-    ];
+    try {
+      const taskId = await enqueueTask({
+        skill: isScout ? 'opportunity_scout' : 'affiliate_research',
+        agentId: agent.id,
+        campaignId: campaign.id,
+        dryRun: !headless,
+        input: isScout
+          ? { minCommission: agent.minPayout ?? 250, region: agent.region || 'United States', notes: agent.notes || '', intel: agent.intel || '' }
+          : { vertical: agent.vertical, region: agent.region || 'United States', minPayout: agent.minPayout ?? campaign.payout ?? 100, notes: agent.notes || '' },
+      });
+      addWorkflowLog('success', `Task queued. ID: ${taskId}`);
+      setCurrentStepText('Waiting for the backend…');
 
-    for (let i = 0; i < steps.length; i++) {
-      setCurrentStepText(steps[i].text);
-      addWorkflowLog(steps[i].type, steps[i].text);
-      setExecutionProgress(Math.round(((i + 1) / steps.length) * 100));
-      await new Promise(resolve => setTimeout(resolve, steps[i].delay));
+      const { onSnapshot, doc } = await import('firebase/firestore');
+      const { db } = await import('../firebase');
+      let lastStep = '';
+      const unsubscribe = onSnapshot(doc(db, 'workflow_tasks', taskId), (snapshot) => {
+        const data = snapshot.data();
+        if (!data) return;
+        if (typeof data.progress === 'number') setExecutionProgress(data.progress);
+        if (data.currentStep && data.currentStep !== lastStep) {
+          lastStep = data.currentStep;
+          setCurrentStepText(data.currentStep);
+          addWorkflowLog('info', data.currentStep);
+        }
+        if (data.status === 'awaiting_approval' || data.status === 'completed') {
+          setIsExecuting(false);
+          const n = data.result?.count ?? 0;
+          addWorkflowLog('success', n ? `${n} ${isScout ? 'opportunit' + (n === 1 ? 'y' : 'ies') : 'program(s)'} found — review on the Approvals page.` : 'Task completed.');
+          toast.success(n ? `${n} ready for your review` : 'Task completed');
+          unsubscribe();
+        } else if (data.status === 'failed') {
+          setIsExecuting(false);
+          addWorkflowLog('error', `Failed: ${data.error}`);
+          toast.error(`Task failed: ${data.error}`);
+          unsubscribe();
+        }
+      });
+    } catch (error) {
+      console.error(error);
+      addWorkflowLog('error', 'Could not queue the task. Are you signed in?');
+      toast.error('Could not queue the task.');
+      setIsExecuting(false);
     }
-
-    // Generate a random sale
-    const saleAmount = Math.floor(Math.random() * 300) + 150;
-    const commissionAmount = campaign.payout;
-    
-    addAffiliateSale({
-      campaignName: campaign.name,
-      product: 'Enterprise License Sync',
-      amount: saleAmount,
-      commission: commissionAmount,
-      status: 'approved',
-      agentName: agent.name
-    });
-
-    // Automatically request ad spend scaling
-    requestAdSpend(agent.id, 250, 'Automated scaling for high-converting Playwright workflow');
-
-    addWorkflowLog('success', `Workflow completed successfully! Commission of $${commissionAmount} generated.`);
-    toast.success(`Workflow complete! Generated $${commissionAmount} commission.`);
-    setIsExecuting(false);
   };
 
 const triggerWebhookWorkflow = async (webhook: IncomingWebhook, payload: string) => {
@@ -313,15 +323,19 @@ const triggerWebhookWorkflow = async (webhook: IncomingWebhook, payload: string)
       addWorkflowLog('info', 'Connecting to secure Firebase backend...');
       
       // Create task document in Firestore
+      let parsed: Record<string, unknown> = {};
+      try { parsed = JSON.parse(payload); } catch { parsed = { prompt: payload }; }
+      const { skill, ...input } = parsed as { skill?: string } & Record<string, unknown>;
       const taskRef = await addDoc(collection(db, 'workflow_tasks'), {
+        ownerUid: user?.uid,
         webhookId: webhook.id,
-        targetAgentId: agent.id,
-        targetCampaignId: campaign.id,
-        payload: payload,
+        agentId: agent.id,
+        campaignId: campaign.id,
+        skill: skill || 'llm_prompt',
+        input: skill ? input : { prompt: `Summarize this incoming event for the operator and suggest one next action:\n${payload}` },
         status: 'pending',
         progress: 0,
         createdAt: new Date(),
-        payout: campaign.payout,
       });
 
       addWorkflowLog('success', `Task securely queued in Firestore. Task ID: ${taskRef.id}`);
@@ -337,21 +351,11 @@ const triggerWebhookWorkflow = async (webhook: IncomingWebhook, payload: string)
              addWorkflowLog('info', data.currentStep);
           }
           
-          if (data.status === 'completed') {
+          if (data.status === 'completed' || data.status === 'awaiting_approval') {
             setIsExecuting(false);
-            const commissionAmount = data.commissionGenerated || campaign.payout;
-            
-            addAffiliateSale({
-              campaignName: campaign.name,
-              product: 'Webhook Triggered Sale',
-              amount: commissionAmount * 2, // Example multiplier for sale vs commission
-              commission: commissionAmount,
-              status: 'approved',
-              agentName: agent.name
-            });
-
-            addWorkflowLog('success', `Backend execution completed! Commission of $${commissionAmount} generated.`);
-            toast.success(`Webhook trigger successful! Generated $${commissionAmount} commission.`);
+            const text = data.result?.text ? String(data.result.text).slice(0, 400) : '';
+            addWorkflowLog('success', text ? `Backend result: ${text}` : 'Backend task finished. Check Approvals if it produced proposals.');
+            toast.success('Webhook task finished.');
             unsubscribe();
           } else if (data.status === 'failed') {
             setIsExecuting(false);
@@ -821,37 +825,24 @@ const triggerWebhookWorkflow = async (webhook: IncomingWebhook, payload: string)
                   </div>
                 </div>
 
-                {/* Playwright Automation Settings */}
+                {/* Run settings */}
                 <div className="space-y-4">
                   <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
                     <Settings className="w-6 h-6 text-brand-500" />
-                    Playwright Config
+                    Run Settings
                   </h2>
 
                   <div className="bg-white rounded-3xl border border-slate-100 p-6 space-y-6">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-sm font-bold text-slate-900">Headless Mode</h4>
-                          <p className="text-xs text-slate-400">Run browser without GUI</p>
+                          <h4 className="text-sm font-bold text-slate-900">Write results</h4>
+                          <p className="text-xs text-slate-400">Off = dry run: logs only, no proposals created</p>
                         </div>
                         <input 
                           type="checkbox" 
                           checked={headless} 
                           onChange={(e) => setHeadless(e.target.checked)}
-                          className="w-4 h-4 text-brand-500 border-slate-300 rounded focus:ring-brand-500"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900">Anti-Bot Bypass</h4>
-                          <p className="text-xs text-slate-400">Evade Cloudflare & Captchas</p>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={bypassAntiBot} 
-                          onChange={(e) => setBypassAntiBot(e.target.checked)}
                           className="w-4 h-4 text-brand-500 border-slate-300 rounded focus:ring-brand-500"
                         />
                       </div>

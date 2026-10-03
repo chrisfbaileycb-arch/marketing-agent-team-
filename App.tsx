@@ -14,6 +14,7 @@ const Workflows = lazy(() => import('./src/pages/Workflows.tsx'));
 const Marketplace = lazy(() => import('./src/pages/Marketplace.tsx'));
 const Skills = lazy(() => import('./src/pages/Skills.tsx'));
 const HttpsLayers = lazy(() => import('./src/pages/HttpsLayers.tsx'));
+const Approvals = lazy(() => import('./src/pages/Approvals.tsx'));
 const NotFound = lazy(() => import('./src/pages/NotFound.tsx'));
 
 const PageLoader = () => (
@@ -36,6 +37,7 @@ const App: React.FC = () => {
               <Route path="/marketplace" element={<Marketplace />} />
               <Route path="/skills" element={<Skills />} />
               <Route path="/https-layers" element={<HttpsLayers />} />
+              <Route path="/approvals" element={<Approvals />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

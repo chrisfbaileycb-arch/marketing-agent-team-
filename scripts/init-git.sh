@@ -1,17 +1,12 @@
 #!/bin/bash
-
-# Initialize the local git repository
-git init
-
-# Add the remote origin using your provided GitHub URL
-git remote add origin https://github.com/chrisfbaileycb-arch/affiliate-agent.git
-
-# Stage all files for the initial commit
-git add .
-
-# Create the initial commit
-git commit -m "feat: initialize affiliate agent platform with ci/cd pipeline"
-
-# Set the upstream branch and push to GitHub
-git branch -M main
-git push -u origin main
+# This script is kept for reference only — the repo is already initialized.
+# To clone and set up fresh:
+#
+#   git clone https://github.com/chrisfbaileycb-arch/marketing-agent-team-.git
+#   cd marketing-agent-team-
+#   npm install
+#   cd functions && npm install && cd ..
+#   cp functions/.env.example functions/.env
+#   # Fill in functions/.env, then:
+#   bash scripts/setup-uid.sh YOUR_FIREBASE_UID
+#   firebase deploy --only firestore:rules,firestore:indexes,functions

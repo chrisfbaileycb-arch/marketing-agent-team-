@@ -103,7 +103,7 @@ const Marketplace: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xs text-slate-400">EPC</p>
-                    <p className="font-bold text-slate-900">${offer.epc.toFixed(2)}</p>
+                    <p className="font-bold text-slate-900">${(offer.epc ?? 0).toFixed(2)}</p>
                   </div>
                 </div>
                 <button
